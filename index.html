@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo App</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
+  </head>
+
+  <body class="bg-black min-h-screen text-white">
+    <!-- ADD TASK MODAL -->
+    <div
+      id="open-newTask"
+      class="bg-black/80 fixed top-0 left-0 right-0 w-full hidden h-full p-5 flex flex-col items-center backdrop-blur-sm z-50">
+      <h2 class="text-white text-5xl font-bold mt-10 mb-4">ToDo List</h2>
+
+      <div
+        class="flex flex-col rounded-3xl bg-white/20 backdrop-blur-sm w-[80%] max-w-xl items-center p-5 my-auto">
+        <div id="inputfield" class="flex flex-col gap-5 w-full">
+          <input
+            id="newTask"
+            type="text"
+            class="outline-none border-2 border-gray-300 rounded-lg p-3 text-black"
+            placeholder="Enter a new task" />
+
+          <textarea
+            id="discription"
+            rows="3"
+            class="outline-none border border-red-200 p-3 rounded-xl resize-none text-black"
+            placeholder="Enter about the task"></textarea>
+
+          <button
+            id="addbtn"
+            class="bg-blue-500 w-[50%] mx-auto text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+            Add Task
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- FILTER BUTTONS -->
+    <div class="bg-zinc-900 p-4 sticky top-0 z-40">
+      <div class="grid grid-cols-2 md:grid-cols-4 max-w-5xl mx-auto gap-5">
+        <button
+          onclick="filterTasks('all')"
+          class="px-3 py-2 text-cyan-300 rounded-xl border border-cyan-300 hover:bg-cyan-300 hover:text-black transition">
+          ALL
+        </button>
+
+        <button
+          onclick="filterTasks('To Start')"
+          class="px-3 py-2 text-cyan-300 rounded-xl border border-cyan-300 hover:bg-cyan-300 hover:text-black transition">
+          To Start
+        </button>
+
+        <button
+          onclick="filterTasks('In Progress')"
+          class="px-3 py-2 text-cyan-300 rounded-xl border border-cyan-300 hover:bg-cyan-300 hover:text-black transition">
+          In Progress
+        </button>
+
+        <button
+          onclick="filterTasks('Completed')"
+          class="px-3 py-2 text-cyan-300 rounded-xl border border-cyan-300 hover:bg-cyan-300 hover:text-black transition">
+          Completed
+        </button>
+      </div>
+    </div>
+
+    <!-- RESULT -->
+
+    <div
+      id="result"
+      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 p-6"></div>
+
+    <!-- ADD BUTTON -->
+
+    <button
+      id="newBtn"
+      class="fixed bottom-4 right-4 cursor-pointer transition duration-300 z-50">
+      <i class="bi bi-plus-circle text-6xl text-cyan-400"></i>
+    </button>
+
+    <script>
+      const newbtn = document.getElementById("newBtn");
+      const taskInput = document.getElementById("newTask");
+      const discription = document.getElementById("discription");
+      const result = document.getElementById("result");
+      const addbtn = document.getElementById("addbtn");
+      const openNewTask = document.getElementById("open-newTask");
+
+      let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+      let currentFilter = "all";
+
+      function openTask() {
+        openNewTask.classList.remove("hidden");
+        newbtn.style.transform = "rotate(45deg)";
+      }
+
+      function closeTask() {
+        openNewTask.classList.add("hidden");
+        newbtn.style.transform = "rotate(0deg)";
+      }
+
+      newbtn.addEventListener("click", () => {
+        if (openNewTask.classList.contains("hidden")) {
+          openTask();
+        } else {
+          closeTask();
+        }
+      });
+
+      function saveTasks() {
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+      }
+
+      addbtn.addEventListener("click", () => {
+        const title = taskInput.value.trim();
+        const desc = discription.value.trim();
+
+        if (title === "") return;
+
+        const task = {
+          id: Date.now(),
+
+          title: title,
+
+          desc: desc,
+
+          status: "To Start",
+        };
+
+        tasks.unshift(task);
+
+        saveTasks();
+
+        renderTasks();
+
+        taskInput.value = "";
+        discription.value = "";
+
+        closeTask();
+      });
+
+      function renderTasks() {
+        result.innerHTML = "";
+
+        let filteredTasks = tasks;
+
+        if (currentFilter !== "all") {
+          filteredTasks = tasks.filter((task) => task.status === currentFilter);
+        }
+
+        if (filteredTasks.length === 0) {
+          result.innerHTML = `
+            <h1 class="text-center text-3xl col-span-full text-gray-400">
+              No Tasks Found
+            </h1>
+          `;
+
+          return;
+        }
+
+        filteredTasks.forEach((task) => {
+          const card = document.createElement("div");
+
+          card.className =
+            "bg-zinc-900 border border-zinc-700 rounded-3xl p-5 flex flex-col gap-4 shadow-lg";
+
+          let actionButtons = "";
+
+          if (task.status === "To Start") {
+            actionButtons = `
+              <button
+                onclick="moveToProgress(${task.id})"
+                class="bg-yellow-500 hover:bg-yellow-600 transition px-4 py-2 rounded-lg font-semibold text-black">
+                Move To Progress
+              </button>
+
+              <button
+                onclick="deleteTask(${task.id})"
+                class="bg-red-500 hover:bg-red-600 transition px-4 py-2 rounded-lg font-semibold">
+                Delete
+              </button>
+            `;
+          } else if (task.status === "In Progress") {
+            actionButtons = `
+              <button
+                onclick="moveToComplete(${task.id})"
+                class="bg-green-500 hover:bg-green-600 transition px-4 py-2 rounded-lg font-semibold text-black">
+                Move To Complete
+              </button>
+
+              <button
+                onclick="deleteTask(${task.id})"
+                class="bg-red-500 hover:bg-red-600 transition px-4 py-2 rounded-lg font-semibold">
+                Delete
+              </button>
+            `;
+          } else {
+            actionButtons = `
+              <button
+                onclick="deleteTask(${task.id})"
+                class="bg-red-500 hover:bg-red-600 transition px-4 py-2 rounded-lg font-semibold">
+                Delete
+              </button>
+            `;
+          }
+
+          card.innerHTML = `
+
+            <h2 class="text-2xl font-bold break-words">
+              ${task.title}
+            </h2>
+
+            <p class="text-gray-300 break-words">
+              ${task.desc || "No Description"}
+            </p>
+
+            <div>
+              <span class="bg-cyan-400 text-black px-3 py-1 rounded-full text-sm font-semibold">
+                ${task.status}
+              </span>
+            </div>
+
+            <div class="flex flex-col gap-3 mt-3">
+              ${actionButtons}
+            </div>
+
+          `;
+
+          result.appendChild(card);
+        });
+      }
+
+      function moveToProgress(id) {
+        tasks = tasks.map((task) => {
+          if (task.id === id) {
+            return {
+              ...task,
+              status: "In Progress",
+            };
+          }
+
+          return task;
+        });
+
+        saveTasks();
+
+        renderTasks();
+      }
+
+      function moveToComplete(id) {
+        tasks = tasks.map((task) => {
+          if (task.id === id) {
+            return {
+              ...task,
+              status: "Completed",
+            };
+          }
+
+          return task;
+        });
+
+        saveTasks();
+
+        renderTasks();
+      }
+
+      function deleteTask(id) {
+        tasks = tasks.filter((task) => task.id !== id);
+
+        saveTasks();
+
+        renderTasks();
+      }
+
+      function filterTasks(type) {
+        currentFilter = type;
+
+        renderTasks();
+      }
+
+      renderTasks();
+    </script>
+  </body>
+</html>
